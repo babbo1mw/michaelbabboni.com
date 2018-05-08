@@ -1,0 +1,378 @@
+<html>
+
+<head>
+  <title>Bab's Bot</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.12/css/all.css" integrity="sha384-G0fIWCsCzJIMAVNQPfjH08cyYaUtMwjJwqiRKxxE/rx96Uroj1BtIQ6MLJuheaO9" crossorigin="anonymous">
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+  <script type="text/javascript">
+    var accessToken = "1da862e3f2d645d08dbf6c22ff3592ff",
+      baseUrl = "https://api.api.ai/v1/",
+      $speechInput,
+      $recBtn,
+      recognition,
+      messageRecording = "Recording...",
+      messageCouldntHear = "I couldn't hear you, could you say that again?",
+      messageInternalError = "Oh no, there has been an internal server error",
+      messageSorry = "I'm sorry, I don't have the answer to that yet.";
+    $(document).ready(function() {
+      $speechInput = $("#speech");
+      $recBtn = $("#rec");
+      $speechInput.keypress(function(event) {
+        if (event.which == 13) {
+          event.preventDefault();
+          send();
+        }
+      });
+      $recBtn.on("click", function(event) {
+        switchRecognition();
+      });
+      $(".debug__btn").on("click", function() {
+        $(this).next().toggleClass("is-active");
+        return false;
+      });
+    });
+
+    function startRecognition() {
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.onstart = function(event) {
+        respond(messageRecording);
+        updateRec();
+      };
+      recognition.onresult = function(event) {
+        recognition.onend = null;
+
+        var text = "";
+        for (var i = event.resultIndex; i < event.results.length; ++i) {
+          text += event.results[i][0].transcript;
+        }
+        setInput(text);
+        stopRecognition();
+      };
+      recognition.onend = function() {
+        respond(messageCouldntHear);
+        stopRecognition();
+      };
+      recognition.lang = "en-US";
+      recognition.start();
+    }
+
+    function stopRecognition() {
+      if (recognition) {
+        recognition.stop();
+        recognition = null;
+      }
+      updateRec();
+    }
+
+    function switchRecognition() {
+      if (recognition) {
+        stopRecognition();
+      } else {
+        startRecognition();
+      }
+    }
+
+    function setInput(text) {
+      $speechInput.val(text);
+      send();
+    }
+
+    function updateRec() {
+      $recBtn.text(recognition ? "Stop" : "Speak");
+    }
+
+    function send() {
+      var text = $speechInput.val();
+      $.ajax({
+        type: "POST",
+        url: baseUrl + "query",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        headers: {
+          "Authorization": "Bearer " + accessToken
+        },
+        data: JSON.stringify({
+          query: text,
+          lang: "en",
+          sessionId: "yaydevdiner"
+        }),
+        success: function(data) {
+          prepareResponse(data);
+        },
+        error: function() {
+          respond(messageInternalError);
+        }
+      });
+    }
+
+    function prepareResponse(val) {
+      var debugJSON = JSON.stringify(val, undefined, 2),
+        spokenResponse = val.result.speech;
+      respond(spokenResponse);
+      debugRespond(debugJSON);
+    }
+
+    function debugRespond(val) {
+      $("#response").text(val);
+    }
+
+    function respond(val) {
+      if (val == "") {
+        val = messageSorry;
+      }
+      if (val !== messageRecording) {
+        var msg = new SpeechSynthesisUtterance();
+        msg.voiceURI = "native";
+        msg.text = val;
+        msg.lang = "en-US";
+        window.speechSynthesis.speak(msg);
+      }
+      $("#spokenResponse").addClass("is-active").find(".spoken-response__text").html(val);
+    }
+  </script>
+  <style type="text/css">
+    html {
+      box-sizing: border-box;
+    }
+
+    *,
+    *:before,
+    *:after {
+      box-sizing: inherit;
+    }
+
+    body {
+      /* background-color: #192837; */
+      /* font-family: "Titillium Web", Arial, sans-serif; */
+      font-size: 20px;
+      margin: 0;
+    }
+
+    #container1 {
+      margin-top: 5rem;
+      position: relative;
+      /* top: 40%; */
+      left: 50%;
+      -webkit-transform: translate(-50%, -50%);
+    }
+
+    input {
+      /* background-color: #126077; */
+      /* border: 1px solid #3F7F93; */
+      /* color: #A6CAE6; */
+      /* font-family: "Titillium Web"; */
+      font-size: 20px;
+      line-height: 43px;
+      padding: 0 0.75em;
+      width: 70%;
+      -webkit-transition: all 0.35s ease-in;
+    }
+
+    textarea {
+      /* background-color: #070F24; */
+      /* border: 1px solid #122435; */
+      /* color: #606B88; */
+      padding: 0.5em;
+      width: 100%;
+      -webkit-transition: all 0.35s ease-in;
+    }
+
+    input:active,
+    input:focus,
+    textarea:active,
+    textarea:focus {
+      outline: 1px solid #48788B;
+    }
+
+    .btn {
+      /* background-color: #126178; */
+      /* border: 1px solid #549EAF; */
+      /* color: #549EAF; */
+      cursor: pointer;
+      display: inline-block;
+      /* font-family: "Titillium Web"; */
+      font-size: 20px;
+      line-height: 43px;
+      padding: 0 0.75em;
+      text-align: center;
+      text-transform: uppercase;
+      -webkit-transition: all 0.35s ease-in;
+    }
+
+    .btn:hover {
+      /* background-color: #1888A9; */
+      /* color: #183035; */
+    }
+
+    .debug {
+      bottom: 0;
+      position: fixed;
+      right: 0;
+    }
+
+    .debug__content {
+      font-size: 14px;
+      max-height: 0;
+      overflow: hidden;
+      -webkit-transition: all 0.35s ease-in;
+    }
+
+    .debug__content.is-active {
+      display: block;
+      max-height: 500px;
+    }
+
+    .debug__btn {
+      width: 100%;
+    }
+
+    .spoken-response {
+      max-height: 0;
+      overflow: hidden;
+      -webkit-transition: all 0.35s ease-in;
+    }
+
+    .spoken-response.is-active {
+      max-height: 400px;
+    }
+
+    .spoken-response__text {
+      /* background-color: #040E23; */
+      /* color: #7584A2; */
+      padding: 1em;
+    }
+
+    .t-color {
+      color: #429dd6;
+    }
+
+    .btn-primary {
+      background-color: #429dd6;
+      border: 1px solid #429dd6;
+    }
+
+    .b-color {
+      background-color: #429dd6;
+    }
+
+    .jumbotron {
+      margin-bottom: 0px;
+      background-position: 0% 40%;
+      background-size: cover;
+      background-repeat: no-repeat;
+      color: white;
+      text-shadow: black 0.3em 0.3em 0.3em;
+    }
+  </style>
+</head>
+
+
+
+
+  <ul class="nav navbar-expand-lg navbar-dark bg-dark">
+    <li class="nav-item">
+      <a class="nav-link text-white text-muted" href="index.html">Home</a>
+    </li>
+    <li class="nav-item active">
+      <a class="nav-link  text-white text-muted" href="Portfolio.html">Portfolio</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link text-white text-muted" href="Resume.html">Resume</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link text-white text-muted" href="AboutMe.html">About Me</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link text-white text-muted" href="Skills.html">Skills</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link text-white active" href="Contact.html">Contact <span class="sr-only">(current)</span></a>
+    </li>
+  </ul>
+
+<body>
+  <div class="jumbotron " style="background-image: url('img/IMG_1755 copy.JPG');opacity: .55; height:30%">
+    <div class="container ">
+    </div>
+  </div>
+
+
+
+  <div class="container mt-4 mb-5">
+    <div class="input-group mb-3 ">
+      <input id="speech" type="text" placeholder="Ask me something">
+      <div class="input-group-append ">
+        <button id="rec" class="btn btn-primary " type="button"><div style="font-size:1.5em;"><i class="fas fa-microphone"></i>
+</div></button>
+        <div id="spokenResponse" class="spoken-response">
+          <div class="spoken-response__text"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="container">
+    <!-- Content here -->
+    <div class="card-deck mb-3">
+      <div class="card shadow p-3 mb-5">
+        <div class="mx-auto p-3"><i class="far fa-envelope fa-5x t-color"></i></div>
+        <div class="card-body card-body d-flex flex-column">
+          <h5 class="card-title font-weight-bold">Email</h5>
+          <p class="card-text text-muted">babbo1mw@gmail.com</p>
+          <a href="mailto:babbo1mw@gmail.com" class="btn btn-primary font-weight-bold sticky-bottom mt-auto">Go</a>
+        </div>
+      </div>
+
+
+      <div class="card shadow p-3 mb-5">
+        <div class="mx-auto p-3"><i class="fab fa-linkedin fa-5x t-color"></i></div>
+        <div class="card-body card-body d-flex flex-column">
+          <h5 class="card-title font-weight-bold">LinkedIn</h5>
+          <p class="card-text text-muted"></p>
+          <a href="https://www.linkedin.com/in/michael-babboni-2702933b" class="btn btn-primary font-weight-bold sticky-bottom mt-auto">Go</a>
+        </div>
+      </div>
+
+      <div class="card shadow p-3 mb-5">
+        <div class="mx-auto p-3"><i class="fab fa-github fa-5x t-color"></i></div>
+        <div class="card-body card-body d-flex flex-column">
+          <h5 class="card-title font-weight-bold">Github</h5>
+          <a href="https://github.com/babbo1mw" class="btn btn-primary font-weight-bold sticky-bottom mt-auto">Go</a>
+
+        </div>
+      </div>
+      <div class="card shadow p-3 mb-5">
+        <div class="mx-auto p-3"><i class="fas fa-phone fa-5x t-color"></i></div>
+        <div class="card-body card-body d-flex flex-column">
+          <h5 class="card-title font-weight-bold">Call/Txt</h5>
+          <p class="card-text text-muted">989.854.3445</p>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <!-- <div class="debug">
+  <div class="btn-primary debug__btn btn">
+    Debug JSON results
+  </div>
+  <div class="debug__content">
+    <textarea id="response" cols="40" rows="20"></textarea>
+  </div>
+</div> -->
+
+
+  <link href="https://fonts.googleapis.com/css?family=Titillium+Web:200" rel="stylesheet" type="text/css">
+</body>
+
+</html>
